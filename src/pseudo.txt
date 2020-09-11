@@ -1,0 +1,48 @@
+
+updateWorld:
+    determine state of actors (dissatisfied/satisfied):
+        for each actor:
+            check the color of each surrounding actor (eight in total)
+            determine percentage of same color
+            put state in another array
+
+    move dissatisfied actors to random empty spot:
+        iterate over array of actor-states,
+        for each state:
+            find matching actor (same index/position in world)
+            find an empty location
+            move actor
+
+
+function composition:
+
+    State[][] getStates(Actor[][] world);
+        Actor[] getNeighbours(int x, int y);
+        float getDistribution(Actor[] actors);
+        State determineState(Actor a, Actor[] neighbours);
+
+    void moveActors(Actor[][] world, State[][] states);
+        int findEmptySpot(Actor[][] world);
+        void moveActor(Actor[][] world, int origin, int destination);
+
+
+resulting program:
+
+    void updateWorld() {
+        State[][] states = getStates(world);
+        moveActors(world, states);
+    }
+
+    State[][] getStates(Actor[][] world) {
+        State[][] states = new State[world.length][world[0].length];
+
+        for (int y = 0; y < world.length; y++) {
+            for (int x = 0; x < world[0].length; x++) {
+                Actor[] neighbours = getNeighbours(x, y);
+                State state = determineState(world[y][x], neighbours);
+                states[y][x] = state;
+            }
+        }
+
+        return states;
+    }
