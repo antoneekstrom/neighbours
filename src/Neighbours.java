@@ -51,17 +51,7 @@ public class Neighbours extends Application {
         // % of surrounding neighbours that are like me
         final double threshold = 0.7;
 
-        int nLocations = world.length * world[0].length;
-
         State[][] states = getStates(world, threshold);
-
-        ArrayList<State> flattened = new ArrayList<>();
-        for (State[] row : states) {
-            flattened.addAll(Arrays.asList(row));
-        }
-        int numSatisfied = count(flattened.toArray(), State.SATISFIED) + count(flattened.toArray(), State.NA);
-        out.printf("%nPercentage satisfied: %.2f%%", (float)numSatisfied / (float)nLocations);
-
         moveActors(world, states);
     }
 
@@ -75,7 +65,7 @@ public class Neighbours extends Application {
         // %-distribution of RED, BLUE and NONE
         double[] dist = {0.25, 0.25, 0.50};
         // Number of locations (places) in world (square)
-        int nLocations = 900;
+        int nLocations = 90000;
 
         world = createWorld(dist, nLocations);
 
@@ -87,30 +77,28 @@ public class Neighbours extends Application {
     //---------------- Methods ----------------------------
 
     void moveActors(Actor[][] world, State[][] states) {
+        ArrayList<int[]> emptySpots = null;
+
         for (int y = 0; y < world.length; y++) {
             for (int x = 0; x < world[0].length; x++) {
                 if (states[y][x] != State.UNSATISFIED) {
                     continue;
                 }
 
-                int[] emptySpot = findEmptySpot(world);
+                // TODO optimize finding empty spots
+                // what if there are more unsatisfied actors than empty spots?
+                // are the moved spots of actors affected by previous moves in the loop?
+                if (emptySpots == null || emptySpots.size() == 0) {
+                    emptySpots = getAllEmptySpots(world);
+                    Collections.shuffle(emptySpots);
+                }
+
+                int[] emptySpot = emptySpots.remove(0);
                 if (emptySpot != null) {
                     moveActor(world, new int[] {x, y}, emptySpot);
                 }
             }
         }
-    }
-
-    // Returns array of length 2, where index 0 is x position and index 1 is y position
-    int[] findEmptySpot(Actor[][] world) {
-        ArrayList<int[]> emptySpots = getAllEmptySpots(world);
-
-        if (emptySpots.size() == 0) {
-            return null;
-        }
-
-        Collections.shuffle(emptySpots);
-        return emptySpots.get(0);
     }
 
     ArrayList<int[]> getAllEmptySpots(Actor[][] world) {
@@ -270,8 +258,8 @@ public class Neighbours extends Application {
 
     // ###########  NOTHING to do below this row, it's JavaFX stuff  ###########
 
-    double width = 400;   // Size for window
-    double height = 400;
+    double width = 600;   // Size for window
+    double height = 600;
     long previousTime = nanoTime();
     final long interval = 450000000;
     double dotSize;
