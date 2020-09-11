@@ -6,8 +6,10 @@ import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
+import javafx.util.Pair;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 
 import static java.lang.Math.round;
@@ -49,11 +51,18 @@ public class Neighbours extends Application {
         // % of surrounding neighbours that are like me
         final double threshold = 0.7;
 
-        for (int y = 0; y < world.length; y++) {
-            for (int x = 0; x < world[0].length; x++) {
+        int nLocations = world.length * world[0].length;
 
-            }
+        State[][] states = getStates(world, threshold);
+
+        ArrayList<State> flattened = new ArrayList<>();
+        for (State[] row : states) {
+            flattened.addAll(Arrays.asList(row));
         }
+        int numSatisfied = count(flattened.toArray(), State.SATISFIED) + count(flattened.toArray(), State.NA);
+        out.printf("%nPercentage satisfied: %.2f%%", (float)numSatisfied / (float)nLocations);
+
+        moveActors(world, states);
     }
 
     // This method initializes the world variable with a random distribution of Actors
@@ -68,9 +77,7 @@ public class Neighbours extends Application {
         // Number of locations (places) in world (square)
         int nLocations = 900;
 
-        // TODO Create and populate world
         world = createWorld(dist, nLocations);
-
 
         // Should be last
         fixScreenSize(nLocations);
@@ -79,8 +86,107 @@ public class Neighbours extends Application {
 
     //---------------- Methods ----------------------------
 
-    State getActorState(Actor[][] world, int x, int y) {
-        return State.NA;
+    void moveActors(Actor[][] world, State[][] states) {
+        for (int y = 0; y < world.length; y++) {
+            for (int x = 0; x < world[0].length; x++) {
+                if (states[y][x] != State.UNSATISFIED) {
+                    continue;
+                }
+
+                int[] emptySpot = findEmptySpot(world);
+                if (emptySpot != null) {
+                    moveActor(world, new int[] {x, y}, emptySpot);
+                }
+            }
+        }
+    }
+
+    // Returns array of length 2, where index 0 is x position and index 1 is y position
+    int[] findEmptySpot(Actor[][] world) {
+        ArrayList<int[]> emptySpots = getAllEmptySpots(world);
+
+        if (emptySpots.size() == 0) {
+            return null;
+        }
+
+        Collections.shuffle(emptySpots);
+        return emptySpots.get(0);
+    }
+
+    ArrayList<int[]> getAllEmptySpots(Actor[][] world) {
+        ArrayList<int[]> spots = new ArrayList<>();
+
+        for (int y = 0; y < world.length; y++) {
+            for (int x = 0; x < world[0].length; x++) {
+                if (world[y][x] == Actor.NONE) {
+                    spots.add(new int[] {x, y});
+                }
+            }
+        }
+
+        return spots;
+    }
+
+    void moveActor(Actor[][] world, int[] origin, int[] destination) {
+        world[destination[1]][destination[0]] = world[origin[1]][origin[0]];
+        world[origin[1]][origin[0]] = Actor.NONE;
+    }
+
+    State[][] getStates(Actor[][] world, double threshold) {
+        State[][] states = new State[world.length][world[0].length];
+
+        for (int y = 0; y < states.length; y++) {
+            for (int x = 0; x < states[0].length; x++) {
+                Actor[] neighbours = getNeighbours(world, world.length, x, y);
+                float[] dist = getDistribution(neighbours);
+                states[y][x] = determineState(world[y][x], dist, threshold);
+            }
+        }
+
+        return states;
+    }
+
+    Actor[] getNeighbours(Actor[][] world, int nLocations, int x, int y) {
+        Actor[] neighbours = new Actor[8];
+        int currentIndex = 0;
+
+        for (int yOff = -1; yOff <= 1; yOff++) {
+            for (int xOff = -1; xOff <= 1; xOff++) {
+                if (xOff == 0 && yOff == 0) {
+                    continue;
+                }
+                int xPos = xOff + x;
+                int yPos = yOff + y;
+                if (isValidLocation(nLocations, xPos, yPos)) {
+                    neighbours[currentIndex] = world[yPos][xPos];
+                }
+                else {
+                    neighbours[currentIndex] = Actor.NONE;
+                }
+                currentIndex++;
+            }
+        }
+
+        return neighbours;
+    }
+
+    // Returns array of length 2 where index 0 is percent red actors and index 1 is percent blue actors
+    float[] getDistribution(Actor[] actors) {
+        float numActors = actors.length - count(actors, Actor.NONE);
+        return new float[] {
+                count(actors, Actor.RED) / numActors,
+                count(actors, Actor.BLUE) / numActors
+        };
+    }
+
+    State determineState(Actor a, float[] neighbourDist, double threshold) {
+        if (a == Actor.NONE) {
+            return State.NA;
+        }
+        else {
+            float percentLikeMe = neighbourDist[a == Actor.BLUE ? 1 : 0];
+            return percentLikeMe >= threshold ? State.SATISFIED : State.UNSATISFIED;
+        }
     }
 
     ArrayList<Actor> createActorPool(double[] dist, int nLocations) {
