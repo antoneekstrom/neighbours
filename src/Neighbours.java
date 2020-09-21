@@ -11,6 +11,9 @@ import javafx.util.Pair;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static java.lang.Math.round;
 import static java.lang.Math.sqrt;
@@ -63,7 +66,7 @@ public class Neighbours extends Application {
         //test();    // <---------------- Uncomment to TEST!
 
         // %-distribution of RED, BLUE and NONE
-        double[] dist = {0.25, 0.25, 0.50};
+        double[] dist = {0.4, 0.4, 0.20};
         // Number of locations (places) in world (square)
         int nLocations = 90000;
 
@@ -79,24 +82,32 @@ public class Neighbours extends Application {
     void moveActors(Actor[][] world, State[][] states) {
         ArrayList<int[]> emptySpots = null;
 
-        for (int y = 0; y < world.length; y++) {
-            for (int x = 0; x < world[0].length; x++) {
-                if (states[y][x] != State.UNSATISFIED) {
-                    continue;
-                }
+        List<int[]> locations = IntStream.range(0, world.length * world.length).mapToObj(i -> new int[] {
+            i % world.length,
+            i / world.length
+        }).collect(Collectors.toList());
 
-                // TODO optimize finding empty spots
-                // what if there are more unsatisfied actors than empty spots?
-                // are the moved spots of actors affected by previous moves in the loop?
-                if (emptySpots == null || emptySpots.size() == 0) {
-                    emptySpots = getAllEmptySpots(world);
-                    Collections.shuffle(emptySpots);
-                }
+        Collections.shuffle(locations);
 
-                int[] emptySpot = emptySpots.remove(0);
-                if (emptySpot != null) {
-                    moveActor(world, new int[] {x, y}, emptySpot);
-                }
+        for (int[] location : locations) {
+            int x = location[0];
+            int y = location[1];
+
+            if (states[y][x] != State.UNSATISFIED) {
+                continue;
+            }
+
+            // TODO optimize finding empty spots
+            // what if there are more unsatisfied actors than empty spots?
+            // are the moved spots of actors affected by previous moves in the loop?
+            if (emptySpots == null || emptySpots.size() == 0) {
+                emptySpots = getAllEmptySpots(world);
+                Collections.shuffle(emptySpots);
+            }
+
+            int[] emptySpot = emptySpots.remove(0);
+            if (emptySpot != null) {
+                moveActor(world, new int[] {x, y}, emptySpot);
             }
         }
     }
@@ -263,7 +274,7 @@ public class Neighbours extends Application {
     long previousTime = nanoTime();
     final long interval = 450000000;
     double dotSize;
-    final double margin = 50;
+    final double margin = 25;
 
     void fixScreenSize(int nLocations) {
         // Adjust screen window depending on nLocations
