@@ -6,11 +6,9 @@ import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
-import javafx.util.Pair;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
+import java.util.Random;
 
 import static java.lang.Math.round;
 import static java.lang.Math.sqrt;
@@ -43,17 +41,19 @@ public class Neighbours extends Application {
 
     // Below is the *only* accepted instance variable (i.e. variables outside any method)
     // This variable may *only* be used in methods init() and updateWorld()
-    Actor[][] world;              // The world is a square matrix of Actors
+    Actor[][] world;
+    final Random rand = new Random();// The world is a square matrix of Actors
 
     // This is the method called by the timer to update the world
     // (i.e move unsatisfied) approx each 1/60 sec.
     void updateWorld() {
         // % of surrounding neighbours that are like me
-        final double threshold = 0.7;
-
+        final double threshold = 0.3;
         State[][] states = getStates(world, threshold);
-        moveActors(world, states);
+        moveUnsatisfied(world, states);
+        // TODO Update logical state of world
     }
+
 
     // This method initializes the world variable with a random distribution of Actors
     // Method automatically called by JavaFX runtime (before graphics appear)
@@ -65,161 +65,137 @@ public class Neighbours extends Application {
         // %-distribution of RED, BLUE and NONE
         double[] dist = {0.25, 0.25, 0.50};
         // Number of locations (places) in world (square)
-        int nLocations = 90000;
-
-        world = createWorld(dist, nLocations);
-
+        int nLocations = 900;
+        world = createWorld(world, nLocations);
+        // TODO Create and populate world
+        world = populateWorld(world, dist);
         // Should be last
         fixScreenSize(nLocations);
     }
 
+    Actor[][] createWorld(Actor[][] world, int nLocations) {
+        int len = (int) sqrt(nLocations);
+        world = new Actor[len][len];
+        return world;
 
-    //---------------- Methods ----------------------------
+    }
 
-    void moveActors(Actor[][] world, State[][] states) {
-        ArrayList<int[]> emptySpots = null;
-
-        for (int y = 0; y < world.length; y++) {
-            for (int x = 0; x < world[0].length; x++) {
-                if (states[y][x] != State.UNSATISFIED) {
-                    continue;
-                }
-
-                // TODO optimize finding empty spots
-                // what if there are more unsatisfied actors than empty spots?
-                // are the moved spots of actors affected by previous moves in the loop?
-                if (emptySpots == null || emptySpots.size() == 0) {
-                    emptySpots = getAllEmptySpots(world);
-                    Collections.shuffle(emptySpots);
-                }
-
-                int[] emptySpot = emptySpots.remove(0);
-                if (emptySpot != null) {
-                    moveActor(world, new int[] {x, y}, emptySpot);
-                }
+    Actor[][] populateWorld(Actor[][] world, double[] dist)
+    {
+        Arrays.stream(world).forEach(a -> Arrays.fill(a, Actor.NONE));
+        Actor temp;
+        int count = 0;
+        for(int i=0; i < dist[0] * world.length; i++)
+        {
+            for(int j=0; j < world.length; j++)
+            {
+                int randomRow = rand.nextInt(world.length);
+                int randomCol = rand.nextInt(world.length);
+                world[i][j] = Actor.RED;
+                temp = world[i][j];
+                world[i][j] = world[randomRow][randomCol];
+                world[randomRow][randomCol] = temp;
             }
+            count++;
         }
-    }
+        for(int i=count; i < dist[1] * world.length + count; i++)
+        {
+            for(int j=0; j < world.length; j++)
+            {
+                int randomRow = rand.nextInt(world.length);
+                int randomCol = rand.nextInt(world.length);
+                world[i][j] = Actor.BLUE;
+                temp = world[i][j];
+                world[i][j] = world[randomRow][randomCol];
+                world[randomRow][randomCol] = temp;
 
-    ArrayList<int[]> getAllEmptySpots(Actor[][] world) {
-        ArrayList<int[]> spots = new ArrayList<>();
-
-        for (int y = 0; y < world.length; y++) {
-            for (int x = 0; x < world[0].length; x++) {
-                if (world[y][x] == Actor.NONE) {
-                    spots.add(new int[] {x, y});
-                }
             }
+
         }
-
-        return spots;
-    }
-
-    void moveActor(Actor[][] world, int[] origin, int[] destination) {
-        world[destination[1]][destination[0]] = world[origin[1]][origin[0]];
-        world[origin[1]][origin[0]] = Actor.NONE;
-    }
-
-    State[][] getStates(Actor[][] world, double threshold) {
-        State[][] states = new State[world.length][world[0].length];
-
-        for (int y = 0; y < states.length; y++) {
-            for (int x = 0; x < states[0].length; x++) {
-                Actor[] neighbours = getNeighbours(world, world.length, x, y);
-                float[] dist = getDistribution(neighbours);
-                states[y][x] = determineState(world[y][x], dist, threshold);
-            }
-        }
-
-        return states;
-    }
-
-    Actor[] getNeighbours(Actor[][] world, int nLocations, int x, int y) {
-        Actor[] neighbours = new Actor[8];
-        int currentIndex = 0;
-
-        for (int yOff = -1; yOff <= 1; yOff++) {
-            for (int xOff = -1; xOff <= 1; xOff++) {
-                if (xOff == 0 && yOff == 0) {
-                    continue;
-                }
-                int xPos = xOff + x;
-                int yPos = yOff + y;
-                if (isValidLocation(nLocations, xPos, yPos)) {
-                    neighbours[currentIndex] = world[yPos][xPos];
-                }
-                else {
-                    neighbours[currentIndex] = Actor.NONE;
-                }
-                currentIndex++;
-            }
-        }
-
-        return neighbours;
-    }
-
-    // Returns array of length 2 where index 0 is percent red actors and index 1 is percent blue actors
-    float[] getDistribution(Actor[] actors) {
-        float numActors = actors.length - count(actors, Actor.NONE);
-        return new float[] {
-                count(actors, Actor.RED) / numActors,
-                count(actors, Actor.BLUE) / numActors
-        };
-    }
-
-    State determineState(Actor a, float[] neighbourDist, double threshold) {
-        if (a == Actor.NONE) {
-            return State.NA;
-        }
-        else {
-            float percentLikeMe = neighbourDist[a == Actor.BLUE ? 1 : 0];
-            return percentLikeMe >= threshold ? State.SATISFIED : State.UNSATISFIED;
-        }
-    }
-
-    ArrayList<Actor> createActorPool(double[] dist, int nLocations) {
-        ArrayList<Actor> bollhav = new ArrayList<>();
-
-        for (int i = 0; i < dist[0] * nLocations; i++) {
-            bollhav.add(Actor.RED);
-        }
-
-        for (int i = 0; i < dist[1] * nLocations; i++) {
-            bollhav.add(Actor.BLUE);
-        }
-
-        for (int i = 0; i < dist[2] * nLocations; i++) {
-            bollhav.add(Actor.NONE);
-        }
-
-        Collections.shuffle(bollhav);
-
-        return bollhav;
-    }
-
-    Actor getActor(ArrayList<Actor> actors) {
-        return actors.remove(0);
-    }
-
-    Actor[][] createWorld(double[] dist, int nLocations) {
-        int len = (int)sqrt(nLocations);
-        Actor[][] world = new Actor[len][len];
-        ArrayList<Actor> bollhav = createActorPool(dist, nLocations);
-
-        for (int y = 0; y < len; y++) {
-            for (int x = 0; x < len; x++) {
-                world[y][x] = getActor(bollhav);
-            }
-        }
-
         return world;
     }
 
+    State[][] getStates(Actor[][] world, double threshold)
+    {
+        State[][] states = new State[world.length][world.length];
+        for (int y = 0; y < world.length; y++)
+        {
+            for(int x = 0; x < world.length; x++)
+            {
+                states[y][x] = checkState(world, threshold, y, x);
+                if(states[y][x] == State.UNSATISFIED) {
+                    out.println(states[y][x]);
+                }
+            }
+        }
+        return states;
+    }
+
+    void moveUnsatisfied(Actor[][] world, State[][] states)
+    {
+        Actor temp;
+        for(int x=0; x < states.length; x++)
+        {
+            for(int y=0; y < states[x].length; y++)
+            {
+                if(states[x][y] == State.UNSATISFIED)
+                {
+                    int randomRow = rand.nextInt(world.length);
+                    int randomCol = rand.nextInt(world.length);
+                    while(world[randomRow][randomCol] == Actor.RED || world[randomRow][randomCol] == Actor.BLUE)
+                    {
+                        randomRow = rand.nextInt(world.length);
+                        randomCol = rand.nextInt(world.length);
+                    }
+                    temp = world[x][y];
+                    world[x][y] = world[randomRow][randomCol];
+                    world[randomRow][randomCol] = temp;
+                }
+            }
+        }
+    }
+    double getNeighbours(Actor[][] world, int x, int y)
+    {
+        double sameAgent = 0.0;
+        double totalNeighbours = 0.0;
+        for(int row = x - 1; row <= x + 1; row++)
+        {
+            for(int col = y - 1; col <= y + 1; col++)
+            {
+                if( !(row == x && col == y) && isValidLocation(world.length, row, col))
+                {
+                    totalNeighbours++;
+                    if(world[row][col] == world[x][y])
+                    {
+                        sameAgent++;
+                    }
+                }
+            }
+        }
+        return sameAgent / totalNeighbours;
+    }
+
+    //---------------- Methods ----------------------------
+    State checkState(Actor[][] world, double threshold, int x, int y)
+    {
+        out.println(getNeighbours(world, x, y));
+        if(world[x][y] == Actor.NONE)
+        {
+            return State.NA;
+        }
+        else if(getNeighbours(world, x, y) >= threshold){
+            return State.SATISFIED;
+        }
+        else {
+            return State.UNSATISFIED;
+        }
+    }
     // Check if inside world
     boolean isValidLocation(int size, int row, int col) {
         return 0 <= row && row < size &&
                 0 <= col && col < size;
     }
+
 
     // ------- Testing -------------------------------------
 
@@ -258,10 +234,10 @@ public class Neighbours extends Application {
 
     // ###########  NOTHING to do below this row, it's JavaFX stuff  ###########
 
-    double width = 600;   // Size for window
-    double height = 600;
+    double width = 400;   // Size for window
+    double height = 400;
     long previousTime = nanoTime();
-    final long interval = 450000000;
+    final long interval = 150000000; // 1 was 4
     double dotSize;
     final double margin = 50;
 
@@ -320,7 +296,7 @@ public class Neighbours extends Application {
                 } else {
                     g.setFill(Color.WHITE);
                 }
-                g.fillRect(x, y, dotSize, dotSize);
+                g.fillOval(x, y, dotSize, dotSize);
             }
         }
     }
