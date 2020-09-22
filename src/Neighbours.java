@@ -189,37 +189,33 @@ public class Neighbours extends Application {
     }
 
     ArrayList<Actor> createActorPool(double[] dist, int nLocations) {
-        ArrayList<Actor> bollhav = new ArrayList<>();
+        ArrayList<Actor> actors = new ArrayList<>();
 
         for (int i = 0; i < dist[0] * nLocations; i++) {
-            bollhav.add(Actor.RED);
+            actors.add(Actor.RED);
         }
 
         for (int i = 0; i < dist[1] * nLocations; i++) {
-            bollhav.add(Actor.BLUE);
+            actors.add(Actor.BLUE);
         }
 
         for (int i = 0; i < dist[2] * nLocations; i++) {
-            bollhav.add(Actor.NONE);
+            actors.add(Actor.NONE);
         }
 
-        Collections.shuffle(bollhav);
+        Collections.shuffle(actors);
 
-        return bollhav;
-    }
-
-    Actor getActor(ArrayList<Actor> actors) {
-        return actors.remove(0);
+        return actors;
     }
 
     Actor[][] createWorld(double[] dist, int nLocations) {
         int len = (int)sqrt(nLocations);
         Actor[][] world = new Actor[len][len];
-        ArrayList<Actor> bollhav = createActorPool(dist, nLocations);
+        ArrayList<Actor> actors = createActorPool(dist, nLocations);
 
         for (int y = 0; y < len; y++) {
             for (int x = 0; x < len; x++) {
-                world[y][x] = getActor(bollhav);
+                world[y][x] = actors.remove(0);
             }
         }
 
@@ -244,6 +240,7 @@ public class Neighbours extends Application {
                 {Actor.RED, Actor.NONE, Actor.BLUE}
         };
         double th = 0.5;   // Simple threshold used for testing
+        double[] dist = {0.4, 0.4, 0.2};
 
         int size = testWorld.length;
         out.println(isValidLocation(size, 0, 0));
@@ -252,6 +249,10 @@ public class Neighbours extends Application {
         out.println(isValidLocation(size, 2, 2));
 
         // TODO More tests
+
+        // Test distribution of actors
+        Actor[][] world = createWorld(dist, 9000);
+
 
         exit(0);
     }
