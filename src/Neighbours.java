@@ -7,6 +7,7 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Random;
 
@@ -36,6 +37,8 @@ public class Neighbours extends Application {
     enum State {
         UNSATISFIED,
         SATISFIED,
+        BLUESATISFIED,
+        REDSATISIFED,
         NA     // Not applicable (NA), used for NONEs
     }
 
@@ -65,7 +68,7 @@ public class Neighbours extends Application {
         // %-distribution of RED, BLUE and NONE
         double[] dist = {0.25, 0.25, 0.50};
         // Number of locations (places) in world (square)
-        int nLocations = 900;
+        int nLocations = 90000;
         world = createWorld(world, nLocations);
         // TODO Create and populate world
         world = populateWorld(world, dist);
@@ -134,6 +137,7 @@ public class Neighbours extends Application {
     void moveUnsatisfied(Actor[][] world, State[][] states)
     {
         Actor temp;
+        ArrayList<Integer> blueSatisifed = new ArrayList<>();
         for(int x=0; x < states.length; x++)
         {
             for(int y=0; y < states[x].length; y++)
@@ -181,6 +185,19 @@ public class Neighbours extends Application {
         out.println(getNeighbours(world, x, y));
         if(world[x][y] == Actor.NONE)
         {
+            world[x][y] = Actor.BLUE;
+            if(getNeighbours(world, x , y) >= threshold )
+            {
+                world[x][y] = Actor.NONE;
+                return State.BLUESATISFIED;
+            }
+            world[x][y] = Actor.RED;
+            if(getNeighbours(world, x , y) >= threshold )
+            {
+                world[x][y] = Actor.NONE;
+                return State.REDSATISIFED;
+            }
+
             return State.NA;
         }
         else if(getNeighbours(world, x, y) >= threshold){
