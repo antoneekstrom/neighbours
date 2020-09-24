@@ -6,10 +6,8 @@ import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
-import javafx.util.Pair;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -63,7 +61,7 @@ public class Neighbours extends Application {
     // Don't care about "@Override" and "public" (just accept for now)
     @Override
     public void init() {
-        //test();    // <---------------- Uncomment to TEST!
+        test();    // <---------------- Uncomment to TEST!
 
         // %-distribution of RED, BLUE and NONE
         double[] dist = {0.4, 0.4, 0.20};
@@ -82,6 +80,7 @@ public class Neighbours extends Application {
     void moveActors(Actor[][] world, State[][] states) {
         ArrayList<int[]> emptySpots = null;
 
+        // Put all coordinates as [x, y] into a list
         List<int[]> locations = IntStream.range(0, world.length * world.length).mapToObj(i -> new int[] {
             i % world.length,
             i / world.length
@@ -101,7 +100,7 @@ public class Neighbours extends Application {
             // what if there are more unsatisfied actors than empty spots?
             // are the moved spots of actors affected by previous moves in the loop?
             if (emptySpots == null || emptySpots.size() == 0) {
-                emptySpots = getAllEmptySpots(world);
+                emptySpots = findEmptySpots(world);
                 Collections.shuffle(emptySpots);
             }
 
@@ -112,7 +111,7 @@ public class Neighbours extends Application {
         }
     }
 
-    ArrayList<int[]> getAllEmptySpots(Actor[][] world) {
+    ArrayList<int[]> findEmptySpots(Actor[][] world) {
         ArrayList<int[]> spots = new ArrayList<>();
 
         for (int y = 0; y < world.length; y++) {
@@ -239,8 +238,10 @@ public class Neighbours extends Application {
                 {Actor.NONE, Actor.BLUE, Actor.NONE},
                 {Actor.RED, Actor.NONE, Actor.BLUE}
         };
+
         double th = 0.5;   // Simple threshold used for testing
         double[] dist = {0.4, 0.4, 0.2};
+        int nLocations = 90000;
 
         int size = testWorld.length;
         out.println(isValidLocation(size, 0, 0));
@@ -248,10 +249,40 @@ public class Neighbours extends Application {
         out.println(!isValidLocation(size, 0, 3));
         out.println(isValidLocation(size, 2, 2));
 
-        // TODO More tests
 
         // Test distribution of actors
-        Actor[][] world = createWorld(dist, 9000);
+        int numRed = 0, numBlue = 0, numEmpty  = 0;
+        Actor[][] world = createWorld(dist, nLocations);
+
+        // count actual number of agents being created
+        for (Actor[] row : world) {
+            for (Actor a : row) {
+                if (a == Actor.RED) {
+                    numRed++;
+                }
+                else if (a == Actor.BLUE) {
+                    numBlue++;
+                }
+                else {
+                    numEmpty++;
+                }
+            }
+        }
+
+        // compare with correct distribution
+        out.println(numRed == dist[0] * nLocations);
+        out.println(numBlue == dist[1] * nLocations);
+        out.println(numEmpty == dist[2] * nLocations);
+
+
+        // Test findEmptySpots
+        ArrayList<int[]> emptySpots = findEmptySpots(world);
+        Collections.shuffle(emptySpots);
+
+        for (int i = 0; i < 5; i++) {
+            int[] spot = emptySpots.remove(0);
+            out.println(world[spot[1]][spot[0]] == Actor.NONE);
+        }
 
 
         exit(0);
