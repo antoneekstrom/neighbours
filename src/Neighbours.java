@@ -8,8 +8,6 @@ import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 
 import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import static java.lang.Math.*;
 import static java.lang.System.*;
@@ -50,7 +48,7 @@ public class Neighbours extends Application {
         final double threshold = 0.7;
 
         State[][] states = getStates(world, threshold);
-        moveActorsCool(world, states);
+        moveActors(world, states);
     }
 
     // This method initializes the world variable with a random distribution of Actors
@@ -58,12 +56,12 @@ public class Neighbours extends Application {
     // Don't care about "@Override" and "public" (just accept for now)
     @Override
     public void init() {
-        test();    // <---------------- Uncomment to TEST!
+        //test();    // <---------------- Uncomment to TEST!
 
         // %-distribution of RED, BLUE and NONE
         double[] dist = {0.4, 0.4, 0.20};
         // Number of locations (places) in world (square)
-        int nLocations = 9000;
+        int nLocations = 90000;
 
         // Create world
         int len = (int)sqrt(nLocations);
@@ -80,37 +78,6 @@ public class Neighbours extends Application {
     //---------------- Methods ----------------------------
 
     void moveActors(Actor[][] world, State[][] states) {
-        ArrayList<int[]> emptySpots = null;
-
-        // Put all coordinates as [x, y] into a list
-        List<int[]> locations = IntStream.range(0, world.length * world.length).mapToObj(i -> new int[] {
-            i % world.length,
-            i / world.length
-        }).collect(Collectors.toList());
-
-        Collections.shuffle(locations);
-
-        for (int[] location : locations) {
-            int x = location[0];
-            int y = location[1];
-
-            if (states[y][x] != State.UNSATISFIED) {
-                continue;
-            }
-
-            if (emptySpots == null || emptySpots.size() == 0) {
-                emptySpots = findEmptySpots(world);
-                Collections.shuffle(emptySpots);
-            }
-
-            int[] emptySpot = emptySpots.remove(0);
-            if (emptySpot != null) {
-                moveActor(world, new int[] {x, y}, emptySpot);
-            }
-        }
-    }
-
-    void moveActorsCool(Actor[][] world, State[][] states) {
         int[][] emptySpots = null;
         int emptySpotsIndex = 0;
 
@@ -125,15 +92,18 @@ public class Neighbours extends Application {
                 continue;
             }
 
-            if (emptySpots == null || emptySpots.length <= emptySpotsIndex) {
-                emptySpots = findEmptySpotsArray(world);
+            if (emptySpots == null || emptySpotsIndex >= emptySpots.length - 1) {
+                emptySpots = findEmptySpots(world);
                 shuffle(emptySpots);
                 emptySpotsIndex = 0;
             }
 
             int[] emptySpot = emptySpots[emptySpotsIndex];
             emptySpotsIndex++;
-            moveActor(world, location, emptySpot);
+
+            if (emptySpot != null) {
+                moveActor(world, location, emptySpot);
+            }
         }
     }
 
@@ -142,16 +112,15 @@ public class Neighbours extends Application {
 
         for (int y = 0; y < world.length; y++) {
             for (int x = 0; x < world[0].length; x++) {
-                positions[x * y] = new int[] {x, y};
+                positions[x + y * world[0].length] = new int[] {x, y};
             }
         }
 
         return positions;
     }
 
-    int[][] findEmptySpotsArray(Actor[][] world) {
+    int[][] findEmptySpots(Actor[][] world) {
         int[][] spots = new int[world.length * world[0].length][2];
-
         int spotsIndex = 0;
 
         for (int y = 0; y < world.length; y++) {
@@ -170,20 +139,6 @@ public class Neighbours extends Application {
         }
 
         return spotsShort;
-    }
-
-    ArrayList<int[]> findEmptySpots(Actor[][] world) {
-        ArrayList<int[]> spots = new ArrayList<>();
-
-        for (int y = 0; y < world.length; y++) {
-            for (int x = 0; x < world[0].length; x++) {
-                if (world[y][x] == Actor.NONE) {
-                    spots.add(new int[] {x, y});
-                }
-            }
-        }
-
-        return spots;
     }
 
     void moveActor(Actor[][] world, int[] origin, int[] destination) {
@@ -354,7 +309,7 @@ public class Neighbours extends Application {
 
 
         // Test findEmptySpots
-        int[][] emptySpots = findEmptySpotsArray(world);
+        int[][] emptySpots = findEmptySpots(world);
         shuffle(emptySpots);
 
         for (int i = 0; i < 5; i++) {
