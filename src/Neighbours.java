@@ -7,7 +7,10 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 
+<<<<<<< Updated upstream
 import java.util.ArrayList;
+=======
+>>>>>>> Stashed changes
 import java.util.Arrays;
 import java.util.Random;
 
@@ -54,6 +57,10 @@ public class Neighbours extends Application {
         final double threshold = 0.3;
         State[][] states = getStates(world, threshold);
         moveUnsatisfied(world, states);
+<<<<<<< Updated upstream
+=======
+        checkDist(world);
+>>>>>>> Stashed changes
         // TODO Update logical state of world
     }
 
@@ -68,7 +75,11 @@ public class Neighbours extends Application {
         // %-distribution of RED, BLUE and NONE
         double[] dist = {0.25, 0.25, 0.50};
         // Number of locations (places) in world (square)
+<<<<<<< Updated upstream
         int nLocations = 90000;
+=======
+        int nLocations = 9000;
+>>>>>>> Stashed changes
         world = createWorld(world, nLocations);
         // TODO Create and populate world
         world = populateWorld(world, dist);
@@ -82,6 +93,7 @@ public class Neighbours extends Application {
         return world;
 
     }
+<<<<<<< Updated upstream
 
     Actor[][] populateWorld(Actor[][] world, double[] dist)
     {
@@ -129,8 +141,54 @@ public class Neighbours extends Application {
                 if(states[y][x] == State.UNSATISFIED) {
                     out.println(states[y][x]);
                 }
+=======
+
+    void checkDist(Actor[][] world)
+    {
+        int countBlue = 0;
+        int countRed = 0;
+        int countNone = 0;
+        int nothing = 0;
+        for(int r=0; r < world.length; r++)
+        {
+            for(int c=0; c < world[r].length; c++)
+            {
+                if(world[r][c] == Actor.RED)
+                {
+                    countRed++;
+                }
+                else if(world[r][c] == Actor.BLUE)
+                {
+                    countBlue++;
+                }
+                else if(world[r][c] == Actor.NONE)
+                {
+                    countNone++;
+                }
+                else {
+                    nothing++;
+                }
+
             }
         }
+        out.println("Number of blue: " + countBlue + " Number of red: " + countRed + " Number of None: " + countNone + " Number of nothing: " + nothing);
+    }
+
+    Actor[][] populateWorld(Actor[][] world, double[] dist)
+    {
+        Arrays.stream(world).forEach(a -> Arrays.fill(a, Actor.NONE));
+        Actor temp;
+        int count = 0;
+        for(int i=0; i < dist[0] * world.length; i++)
+        {
+            for(int j=0; j < world.length; j++)
+            {
+                world[i][j] = Actor.RED;
+>>>>>>> Stashed changes
+            }
+            count++;
+        }
+<<<<<<< Updated upstream
         return states;
     }
 
@@ -203,6 +261,107 @@ public class Neighbours extends Application {
         else if(getNeighbours(world, x, y) >= threshold){
             return State.SATISFIED;
         }
+=======
+        for(int i=count; i < dist[1] * world.length + count; i++)
+        {
+            for(int j=0; j < world.length; j++)
+            {
+                world[i][j] = Actor.BLUE;
+            }
+
+        }
+        shuffle(world);
+        return world;
+    }
+
+    void shuffle(Actor[][] world)
+    {
+        Actor temp;
+        for(int r=0; r < world.length; r++)
+        {
+            for(int c=0; c < world[r].length; c++)
+            {
+                int randomRow = rand.nextInt(world.length);
+                int randomCol = rand.nextInt(world.length);
+                temp = world[r][c];
+                world[r][c] = world[randomRow][randomCol];
+                world[randomRow][randomCol] = temp;
+            }
+        }
+    }
+
+    State[][] getStates(Actor[][] world, double threshold)
+    {
+        State[][] states = new State[world.length][world.length];
+        for (int y = 0; y < world.length; y++)
+        {
+            for(int x = 0; x < world.length; x++)
+            {
+                states[y][x] = checkState(world, threshold, y, x);
+                if(states[y][x] == State.UNSATISFIED) {
+                    out.println(states[y][x]);
+                }
+            }
+        }
+        return states;
+    }
+
+    void moveUnsatisfied(Actor[][] world, State[][] states)
+    {
+        Actor temp;
+        for(int x=0; x < states.length; x++)
+        {
+            for(int y=0; y < states[x].length; y++)
+            {
+                if(states[x][y] == State.UNSATISFIED)
+                {
+                    int randomRow = rand.nextInt(world.length);
+                    int randomCol = rand.nextInt(world.length);
+                    while(world[randomRow][randomCol] == Actor.RED || world[randomRow][randomCol] == Actor.BLUE)
+                    {
+                        randomRow = rand.nextInt(world.length);
+                        randomCol = rand.nextInt(world.length);
+                    }
+                    temp = world[x][y];
+                    world[x][y] = world[randomRow][randomCol];
+                    world[randomRow][randomCol] = temp;
+                }
+            }
+        }
+    }
+    double getNeighbours(Actor[][] world, int x, int y)
+    {
+        double sameAgent = 0.0;
+        double totalNeighbours = 0.0;
+        for(int row = x - 1; row <= x + 1; row++)
+        {
+            for(int col = y - 1; col <= y + 1; col++)
+            {
+                if( !(row == x && col == y) && isValidLocation(world.length, row, col))
+                {
+                    totalNeighbours++;
+                    if(world[row][col] == world[x][y])
+                    {
+                        sameAgent++;
+                    }
+                }
+            }
+        }
+        return sameAgent / totalNeighbours;
+    }
+
+    //---------------- Methods ----------------------------
+    State checkState(Actor[][] world, double threshold, int x, int y)
+    {
+        out.println(getNeighbours(world, x, y));
+        if(world[x][y] == Actor.NONE)
+        {
+            return State.NA;
+        }
+        else if(getNeighbours(world, x, y) >= threshold){
+            return State.SATISFIED;
+        }
+>>>>>>> Stashed changes
         else {
             return State.UNSATISFIED;
         }
