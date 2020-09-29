@@ -47,7 +47,9 @@ public class Neighbours extends Application {
         // % of surrounding neighbours that are like me
         final double threshold = 0.7;
 
+        // Map the world to an array of representing their states
         State[][] states = getStates(world, threshold);
+        // Move all the actors in an unsatisified state to a new (random) location
         moveActors(world, states);
     }
 
@@ -64,10 +66,10 @@ public class Neighbours extends Application {
         int nLocations = 90000;
 
         // Create world
-        int len = (int)sqrt(nLocations);
+        int len = (int)sqrt(nLocations); // Take squareroot of nLocations to get length of the sides
         world = new Actor[len][len];
 
-        // Fill with actors
+        // Fill the world with actors
         populate(world, dist);
 
         // Should be last
@@ -77,75 +79,113 @@ public class Neighbours extends Application {
 
     //---------------- Methods ----------------------------
 
+    /**
+     * Move all actors in an unsatisified state to a new random location in the world.
+     * @param world a matrix storing the locations of the actors
+     * @param states a matrix the same size as {@code world} which contains their states
+     */
     void moveActors(Actor[][] world, State[][] states) {
-        int[][] emptySpots = null;
-        int emptySpotsIndex = 0;
+        // Originally used lists here, which would've made it a little cleaner
+        int[][] emptySpots = null; // Will contain all the currently empty locations in world
+        int emptySpotsIndex = 0; // To keep track of where in the array we are currently looking
 
+        // Get an array of all locations [x, y] in world
         int[][] locations = getLocations(world);
         shuffle(locations);
 
+        // Iterate over all the locations (in a shuffled order)
         for (int[] location : locations) {
             int x = location[0];
             int y = location[1];
 
+            // Only look for unsatisified actors
             if (states[y][x] != State.UNSATISFIED) {
                 continue;
             }
 
+            // Find new empty spots if our current array has been depleted or not created yet
             if (emptySpots == null || emptySpotsIndex >= emptySpots.length - 1) {
-                emptySpots = findEmptySpots(world);
+                emptySpots = findEmptyLocations(world);
                 shuffle(emptySpots);
-                emptySpotsIndex = 0;
+                emptySpotsIndex = 0; // Reset array pointer
             }
 
+            // Get the next empty spot in the array, and then look at the next one
             int[] emptySpot = emptySpots[emptySpotsIndex];
             emptySpotsIndex++;
 
             if (emptySpot != null) {
+                // Move the unsatisfied actor in the current location to the empty spot
                 moveActor(world, location, emptySpot);
             }
         }
     }
 
-    <T> int[][] getLocations(T[][] world) {
-        int[][] positions = new int[world.length * world[0].length][2];
+    /**
+     * Helper method to generate an array of all locations {@code [x, y]} in a matrix
+     * @param matrix matrix to get the positions of
+     * @param <T> the type of array
+     * @return an array of {@code [x, y]} positions
+     */
+    <T> int[][] getLocations(T[][] matrix) {
+        int[][] positions = new int[matrix.length * matrix[0].length][2];
 
-        for (int y = 0; y < world.length; y++) {
-            for (int x = 0; x < world[0].length; x++) {
-                positions[x + y * world[0].length] = new int[] {x, y};
+        for (int y = 0; y < matrix.length; y++) {
+            for (int x = 0; x < matrix[0].length; x++) {
+                positions[x + y * matrix[0].length] = new int[] {x, y};
             }
         }
 
         return positions;
     }
 
-    int[][] findEmptySpots(Actor[][] world) {
-        int[][] spots = new int[world.length * world[0].length][2];
-        int spotsIndex = 0;
+    /**
+     * Iterate over {@code world} to find all locations where {@link Actor} is {@code NONE}.
+     * @param world matrix of actors
+     * @return an array of {@code [x, y]} positions
+     */
+    int[][] findEmptyLocations(Actor[][] world) {
+        // An array of length nLocations containing [x, y] arrays
+        int[][] locations = new int[world.length * world[0].length][2];
+        int locationsIndex = 0; // Current index of array we are looking at
 
         for (int y = 0; y < world.length; y++) {
             for (int x = 0; x < world[0].length; x++) {
-                if (world[y][x] == Actor.NONE) {
-                    spots[spotsIndex] = new int[] {x, y};
-                    spotsIndex++;
+                if (world[y][x] == Actor.NONE) { // Add to locations if location is empty
+                    locations[locationsIndex] = new int[] {x, y};
+                    locationsIndex++;
                 }
             }
         }
 
-        int[][] spotsShort = new int[spotsIndex][2];
+        // Because we did not know in advance how many empty spots there would be,
+        // a large portion of the original array is empty ( great place to use ArrayList :) )
+        int[][] shortLocations = new int[locationsIndex][2];
 
-        for (int i = 0; i < spotsShort.length; i++) {
-            spotsShort[i] = spots[i];
+        // Now we know that the number of empty locations is locationsIndex and we can make a new array of that length
+        for (int i = 0; i < shortLocations.length; i++) {
+            shortLocations[i] = locations[i];
         }
 
-        return spotsShort;
+        return shortLocations;
     }
 
+    /**
+     * Move an actor to a new location.
+     * @param world the matrix in which to move the actor
+     * @param origin location of the actor to move
+     * @param destination destination to move to the actor to
+     */
     void moveActor(Actor[][] world, int[] origin, int[] destination) {
         world[destination[1]][destination[0]] = world[origin[1]][origin[0]];
         world[origin[1]][origin[0]] = Actor.NONE;
     }
 
+    /**
+     * Determine the states of the actors in a matrix.
+     * @param world matrix of actors
+     * @param threshold threshold for proportion of same-color neighbours in order for the actor to be satisified
+     */
     State[][] getStates(Actor[][] world, double threshold) {
         State[][] states = new State[world.length][world[0].length];
 
@@ -160,23 +200,37 @@ public class Neighbours extends Application {
         return states;
     }
 
+    /**
+     * Get the surrounding neighbours of an actor.
+     * @param world matrix of actors
+     * @param nLocations total number of locations in {@code world}, which equates to {@code rows * columns}.
+     * @param x coordinate on the x-axis of the actor (columns)
+     * @param y coordinate on the y-axis of the actor (rows)
+     * @return an array of the neighbours (length 8)
+     */
     Actor[] getNeighbours(Actor[][] world, int nLocations, int x, int y) {
         Actor[] neighbours = new Actor[8];
         int currentIndex = 0;
 
+        // Iterate over a 3x3 submatrix centered on the given location
         for (int yOff = -1; yOff <= 1; yOff++) {
             for (int xOff = -1; xOff <= 1; xOff++) {
-                if (xOff == 0 && yOff == 0) {
+
+                if (xOff == 0 && yOff == 0) { // Skip the actor in the middle (it could not be its own neighbour)
                     continue;
                 }
+
+                // Compute the absolute location of the neighbour
                 int xPos = xOff + x;
                 int yPos = yOff + y;
-                if (isValidLocation(nLocations, xPos, yPos)) {
+
+                if (isValidLocation(nLocations, xPos, yPos)) { // Make sure the location is valid
                     neighbours[currentIndex] = world[yPos][xPos];
                 }
                 else {
                     neighbours[currentIndex] = Actor.NONE;
                 }
+
                 currentIndex++;
             }
         }
@@ -184,7 +238,11 @@ public class Neighbours extends Application {
         return neighbours;
     }
 
-    // Returns array of length 2 where index 0 is percent red actors and index 1 is percent blue actors
+    /**
+     * Returns array of length 2 where index 0 is percent red actors and index 1 is percent blue actors.
+     * @param actors an array of actors
+     * @return the distribution
+     */
     float[] getDistribution(Actor[] actors) {
         float numActors = actors.length - count(actors, Actor.NONE);
         return new float[] {
@@ -193,6 +251,13 @@ public class Neighbours extends Application {
         };
     }
 
+    /**
+     * Determine the state of an actor based on the distribution of it's neighbours.
+     * @param a the actor
+     * @param neighbourDist the distribution of it's neighbours
+     * @param threshold threshold for proportion of same-color neighbours in order for the actor to be satisified
+     * @return state of the actor
+     */
     State determineState(Actor a, float[] neighbourDist, double threshold) {
         if (a == Actor.NONE) {
             return State.NA;
@@ -203,11 +268,21 @@ public class Neighbours extends Application {
         }
     }
 
+    /**
+     * Shuffles an array using the Fisher-Yates method.
+     * @param array to shuffle
+     * @return the same array, but shuffled
+     */
     <T> T[] shuffle(T[] array) {
         return shuffle(array, new Random());
     }
 
-    // Fisher-Yates shuffle
+    /**
+     * Shuffles an array using the Fisher-Yates method. Mutates the original array.
+     * @param array to shuffle
+     * @param r an instance of {@link Random}
+     * @return the same array, but shuffled
+     */
     <T> T[] shuffle(T[] array, Random r) {
 
         for (int i = 0; i <= array.length - 2; i++) {
@@ -220,6 +295,12 @@ public class Neighbours extends Application {
         return array; // return the same array for chain-like purposes
     }
 
+    /**
+     * Make a pool of actors with a certain distribution.
+     * @param dist the distribution of actor-colors.
+     * @param nLocations amount of actors
+     * @return the array of actors
+     */
     Actor[] makeActors(double[] dist, int nLocations) {
         Actor[] actors = new Actor[nLocations];
 
@@ -238,13 +319,18 @@ public class Neighbours extends Application {
             }
         }
 
-        shuffle(actors);
-
         return actors;
     }
 
+    /**
+     * Put a shuffle pool of actors with a certain distribution into a matrix.
+     * @param world the matrix
+     * @param dist the distribution
+     * @return the same matrix, but populated
+     */
     Actor[][] populate(Actor[][] world, double[] dist) {
         Actor[] actors = makeActors(dist, world.length * world[0].length);
+        shuffle(actors); // Shuffle those actors in a random order
 
         for (int y = 0; y < world.length; y++) {
             for (int x = 0; x < world[0].length; x++) {
@@ -255,7 +341,13 @@ public class Neighbours extends Application {
         return world;
     }
 
-    // Check if inside world
+    /**
+     * Check if a location would be contained within a matrix of a certain size.
+     * @param size size of the matrix
+     * @param row coordinate on the x-axis of the location
+     * @param col coordinate on the y-axis of the location
+     * @return of the location is valid
+     */
     boolean isValidLocation(int size, int row, int col) {
         return 0 <= row && row < size &&
                 0 <= col && col < size;
@@ -309,7 +401,7 @@ public class Neighbours extends Application {
 
 
         // Test findEmptySpots
-        int[][] emptySpots = findEmptySpots(world);
+        int[][] emptySpots = findEmptyLocations(world);
         shuffle(emptySpots);
 
         for (int i = 0; i < 5; i++) {
